@@ -17,38 +17,99 @@ app.append(canvas);
 const clearHolder = document.createElement("div");
 const clearButton = document.createElement("button");
 clearButton.innerHTML = "Clear";
-
 clearHolder.append(clearButton);
+
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "Undo";
+clearHolder.append(undoButton);
+
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "Redo";
+clearHolder.append(redoButton);
+
 app.append(clearHolder);
 
 const ctx = canvas.getContext("2d");
 const cursor = { active: false, x: 0, y: 0 };
 
+type Point = { x: number; y: number };
+let lines: Point[][] = [];
+let redoLines: Point[][] = [];
+let currentLine: Point[] | null = null;
+
+function dispatchDrawingChanged() {
+  const event = new CustomEvent("drawing-changed");
+  canvas.dispatchEvent(event);
+}
+
+function redraw() {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (const line of lines) {
+    if (line.length > 1) {
+      ctx.beginPath();
+      const { x, y } = line[0];
+      ctx.moveTo(x, y);
+      for (const point of line) {
+        ctx.lineTo(point.x, point.y);
+      }
+      ctx.stroke();
+    }
+  }
+}
+
+canvas.addEventListener("drawing-changed", redraw);
+
 if (ctx) {
-    canvas.addEventListener("mousedown", (e) => {
-        cursor.active = true;
-        cursor.x = e.offsetX;
-        cursor.y = e.offsetY;
-    });
+  canvas.addEventListener("mousedown", (e) => {
+    cursor.active = true;
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
 
-    canvas.addEventListener("mousemove", (e) => {
-        if (cursor.active) {
-            ctx.beginPath();
-            ctx.moveTo(cursor.x, cursor.y);
-            ctx.lineTo(e.offsetX, e.offsetY);
-            ctx.stroke();
-            cursor.x = e.offsetX;
-            cursor.y = e.offsetY;
-        }
-    });
+    currentLine = [];
+    lines.push(currentLine);
+    redoLines.splice(0, redoLines.length);
+    currentLine.push({ x: cursor.x, y: cursor.y });
 
-    canvas.addEventListener("mouseup", (e) => {
-        cursor.active = false;
-    });
+    dispatchDrawingChanged();
+  });
 
-    clearButton.addEventListener("click", () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
+  canvas.addEventListener("mousemove", (e) => {
+    if (cursor.active && currentLine) {
+      cursor.x = e.offsetX;
+      cursor.y = e.offsetY;
+      currentLine.push({ x: cursor.x, y: cursor.y });
+
+      dispatchDrawingChanged();
+    }
+  });
+
+  canvas.addEventListener("mouseup", () => {
+    cursor.active = false;
+    currentLine = null;
+    dispatchDrawingChanged();
+  });
+
+  clearButton.addEventListener("click", () => {
+    lines = [];
+    redoLines = [];
+    dispatchDrawingChanged();
+  });
+
+  undoButton.addEventListener("click", () => {
+    if (lines.length > 0) {
+      redoLines.push(lines.pop()!);
+      dispatchDrawingChanged();
+    }
+  });
+
+  redoButton.addEventListener("click", () => {
+    if (redoLines.length > 0) {
+      lines.push(redoLines.pop()!);
+      dispatchDrawingChanged();
+    }
+  });
 } else {
-    console.error("Unable to get canvas 2D context");
+  console.error("Unable to get canvas 2D context");
 }
