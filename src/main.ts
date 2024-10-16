@@ -113,3 +113,4 @@ if (ctx) {
 } else {
   console.error("Unable to get canvas 2D context");
 }
+// Step 4 complete with step 3
