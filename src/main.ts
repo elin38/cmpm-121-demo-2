@@ -27,6 +27,7 @@ const buttonHolder = document.createElement("div");
 createButton("Clear", buttonHolder, () => {
   lines = [];
   redoLines = [];
+  stickers = []; // Clear stickers
   dispatchDrawingChanged();
 });
 createButton("Undo", buttonHolder, () => {
@@ -56,6 +57,21 @@ const thickButton = createButton("Thick", thicknessButtonHolder, () => {
 });
 thicknessButtonHolder.append(thinButton, thickButton);
 app.append(thicknessButtonHolder);
+
+// Create sticker buttons
+const stickerButtonHolder = document.createElement("div");
+const stickerEmojis = ["🎉", "😊", "🌟"];
+
+let currentSticker: StickerPreview | null = null;
+let stickers: Sticker[] = [];
+
+stickerEmojis.forEach((emoji) => {
+  createButton(emoji, stickerButtonHolder, () => {
+    currentSticker = new StickerPreview(cursor.x, cursor.y, emoji);
+    dispatchToolMoved();
+  });
+});
+app.append(stickerButtonHolder);
 
 const ctx = canvas.getContext("2d");
 const cursor = { active: false, x: 0, y: 0 };
@@ -89,8 +105,17 @@ function redraw() {
     line.display(ctx);
   }
 
+  // Draw stickers
+  for (const sticker of stickers) {
+    sticker.display(ctx);
+  }
+
   if (!cursor.active && toolPreview) {
     toolPreview.draw(ctx);
+  }
+
+  if (currentSticker) {
+    currentSticker.draw(ctx);
   }
 }
 
@@ -102,9 +127,14 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
-    currentLine = new Line(cursor.x, cursor.y, lineThickness);
-    lines.push(currentLine);
-    redoLines.splice(0, redoLines.length);
+    if (currentSticker) {
+      stickers.push(new Sticker(cursor.x, cursor.y, currentSticker.emoji));
+      currentSticker = null;
+    } else {
+      currentLine = new Line(cursor.x, cursor.y, lineThickness);
+      lines.push(currentLine);
+      redoLines.splice(0, redoLines.length);
+    }
     dispatchDrawingChanged();
   });
 
@@ -113,14 +143,16 @@ if (ctx) {
     cursor.y = e.offsetY;
 
     toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness);
-
     dispatchToolMoved();
 
     if (cursor.active && currentLine) {
       currentLine.drag(e.offsetX, e.offsetY);
       dispatchDrawingChanged();
     } else {
-      dispatchDrawingChanged(); 
+      if (currentSticker) {
+        currentSticker.drag(cursor.x, cursor.y);
+      }
+      dispatchDrawingChanged();
     }
   });
 
@@ -137,7 +169,6 @@ if (ctx) {
 } else {
   console.error("Unable to get canvas 2D context");
 }
-
 
 class Line {
   private points: { x: number; y: number }[];
@@ -172,5 +203,28 @@ class ToolPreview {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.thickness, 0, Math.PI * 2);
     ctx.fill();
+  }
+}
+
+class Sticker {
+  constructor(private x: number, private y: number, public emoji: string) {}
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = "32px Arial";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
+class StickerPreview {
+  constructor(private x: number, private y: number, public emoji: string) {}
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.font = "32px Arial";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+
+  drag(x: number, y: number) {
+    this.x = x; 
+    this.y = y; 
   }
 }
