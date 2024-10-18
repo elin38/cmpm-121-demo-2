@@ -9,25 +9,38 @@ const appTitle = document.createElement("h1");
 appTitle.innerHTML = APP_NAME;
 app.append(appTitle);
 
+// Create canvas
 const canvas = document.createElement("canvas");
 canvas.width = 256;
 canvas.height = 256;
 app.append(canvas);
 
-const clearHolder = document.createElement("div");
+// Create buttons for clear, undo, redo
+const buttonHolder = document.createElement("div");
 const clearButton = document.createElement("button");
 clearButton.innerHTML = "Clear";
-clearHolder.append(clearButton);
+buttonHolder.append(clearButton);
 
 const undoButton = document.createElement("button");
 undoButton.innerHTML = "Undo";
-clearHolder.append(undoButton);
+buttonHolder.append(undoButton);
 
 const redoButton = document.createElement("button");
 redoButton.innerHTML = "Redo";
-clearHolder.append(redoButton);
+buttonHolder.append(redoButton);
 
-app.append(clearHolder);
+app.append(buttonHolder);
+
+const thicknessButtonHolder = document.createElement("div");
+const thinButton = document.createElement("button");
+thinButton.innerHTML = "Thin";
+thicknessButtonHolder.append(thinButton);
+
+const thickButton = document.createElement("button");
+thickButton.innerHTML = "Thick";
+thicknessButtonHolder.append(thickButton);
+
+app.append(thicknessButtonHolder);
 
 const ctx = canvas.getContext("2d");
 const cursor = { active: false, x: 0, y: 0 };
@@ -35,6 +48,10 @@ const cursor = { active: false, x: 0, y: 0 };
 let lines: Line[] = [];
 let redoLines: Line[] = [];
 let currentLine: Line | null = null;
+
+let lineThickness = 1;
+
+thinButton.classList.add("selectedTool");
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
@@ -58,7 +75,7 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
-    currentLine = new Line(cursor.x, cursor.y);
+    currentLine = new Line(cursor.x, cursor.y, lineThickness);
     lines.push(currentLine);
     redoLines.splice(0, redoLines.length);
 
@@ -97,20 +114,33 @@ if (ctx) {
       dispatchDrawingChanged();
     }
   });
+
+  thinButton.addEventListener("click", () => {
+    lineThickness = 1;
+    thinButton.classList.add("selectedTool");
+    thickButton.classList.remove("selectedTool");
+  });
+
+  thickButton.addEventListener("click", () => {
+    lineThickness = 4;
+    thickButton.classList.add("selectedTool");
+    thinButton.classList.remove("selectedTool"); 
+  });
 } else {
   console.error("Unable to get canvas 2D context");
 }
 
-// written with the help of chatGPT
-
 class Line {
   private points: { x: number; y: number }[];
+  private thickness: number;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, thickness: number) {
     this.points = [{ x, y }];
+    this.thickness = thickness;
   }
 
   display(ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = this.thickness; 
     ctx.beginPath();
     const { x, y } = this.points[0];
     ctx.moveTo(x, y);
