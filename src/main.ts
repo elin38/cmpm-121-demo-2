@@ -32,10 +32,9 @@ app.append(clearHolder);
 const ctx = canvas.getContext("2d");
 const cursor = { active: false, x: 0, y: 0 };
 
-type Point = { x: number; y: number };
-let lines: Point[][] = [];
-let redoLines: Point[][] = [];
-let currentLine: Point[] | null = null;
+let lines: Line[] = [];
+let redoLines: Line[] = [];
+let currentLine: Line | null = null;
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
@@ -47,15 +46,7 @@ function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   for (const line of lines) {
-    if (line.length > 1) {
-      ctx.beginPath();
-      const { x, y } = line[0];
-      ctx.moveTo(x, y);
-      for (const point of line) {
-        ctx.lineTo(point.x, point.y);
-      }
-      ctx.stroke();
-    }
+    line.display(ctx);
   }
 }
 
@@ -67,20 +58,16 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
-    currentLine = [];
+    currentLine = new Line(cursor.x, cursor.y);
     lines.push(currentLine);
     redoLines.splice(0, redoLines.length);
-    currentLine.push({ x: cursor.x, y: cursor.y });
 
     dispatchDrawingChanged();
   });
 
   canvas.addEventListener("mousemove", (e) => {
     if (cursor.active && currentLine) {
-      cursor.x = e.offsetX;
-      cursor.y = e.offsetY;
-      currentLine.push({ x: cursor.x, y: cursor.y });
-
+      currentLine.drag(e.offsetX, e.offsetY);
       dispatchDrawingChanged();
     }
   });
@@ -113,4 +100,27 @@ if (ctx) {
 } else {
   console.error("Unable to get canvas 2D context");
 }
-// Step 4 complete with step 3
+
+// written with the help of chatGPT
+
+class Line {
+  private points: { x: number; y: number }[];
+
+  constructor(x: number, y: number) {
+    this.points = [{ x, y }];
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    const { x, y } = this.points[0];
+    ctx.moveTo(x, y);
+    for (const point of this.points) {
+      ctx.lineTo(point.x, point.y);
+    }
+    ctx.stroke();
+  }
+
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+}
