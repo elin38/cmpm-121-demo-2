@@ -12,6 +12,7 @@ app.append(appTitle);
 const canvas = document.createElement("canvas");
 canvas.width = 256;
 canvas.height = 256;
+canvas.style.cursor = "none";
 app.append(canvas);
 
 function createButton(label: string, parent: HTMLElement, onClick: () => void): HTMLButtonElement {
@@ -62,6 +63,7 @@ const cursor = { active: false, x: 0, y: 0 };
 let lines: Line[] = [];
 let redoLines: Line[] = [];
 let currentLine: Line | null = null;
+let toolPreview: ToolPreview | null = null;
 
 let lineThickness = 1;
 
@@ -72,12 +74,23 @@ function dispatchDrawingChanged() {
   canvas.dispatchEvent(event);
 }
 
+function dispatchToolMoved() {
+  const event = new CustomEvent("tool-moved", {
+    detail: { x: cursor.x, y: cursor.y, thickness: lineThickness },
+  });
+  canvas.dispatchEvent(event);
+}
+
 function redraw() {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   for (const line of lines) {
     line.display(ctx);
+  }
+
+  if (!cursor.active && toolPreview) {
+    toolPreview.draw(ctx);
   }
 }
 
@@ -92,27 +105,40 @@ if (ctx) {
     currentLine = new Line(cursor.x, cursor.y, lineThickness);
     lines.push(currentLine);
     redoLines.splice(0, redoLines.length);
-
     dispatchDrawingChanged();
   });
 
   canvas.addEventListener("mousemove", (e) => {
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+
+    toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness);
+
+    dispatchToolMoved();
+
     if (cursor.active && currentLine) {
       currentLine.drag(e.offsetX, e.offsetY);
       dispatchDrawingChanged();
+    } else {
+      dispatchDrawingChanged(); 
     }
   });
 
   canvas.addEventListener("mouseup", () => {
     cursor.active = false;
     currentLine = null;
+    toolPreview = null;
+    dispatchDrawingChanged();
+  });
+
+  canvas.addEventListener("mouseout", () => {
     dispatchDrawingChanged();
   });
 } else {
   console.error("Unable to get canvas 2D context");
 }
 
-// written with the help of chatGPT
+
 class Line {
   private points: { x: number; y: number }[];
   private thickness: number;
@@ -135,5 +161,16 @@ class Line {
 
   drag(x: number, y: number) {
     this.points.push({ x, y });
+  }
+}
+
+class ToolPreview {
+  constructor(private x: number, private y: number, private thickness: number) {}
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.thickness, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
