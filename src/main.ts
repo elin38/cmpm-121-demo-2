@@ -2,7 +2,6 @@ import "./style.css";
 
 const APP_NAME = "Deno Drawer";
 const app = document.querySelector<HTMLDivElement>("#app")!;
-
 document.title = APP_NAME;
 
 const appTitle = document.createElement("h1");
@@ -27,7 +26,7 @@ const buttonHolder = document.createElement("div");
 createButton("Clear", buttonHolder, () => {
   lines = [];
   redoLines = [];
-  stickers = []; // Clear stickers
+  stickers = [];
   dispatchDrawingChanged();
 });
 createButton("Undo", buttonHolder, () => {
@@ -61,26 +60,18 @@ app.append(thicknessButtonHolder);
 let stickers: Sticker[] = [];
 let currentSticker: StickerPreview | null = null;
 
-// Initial stickers data array
 const initialStickers = ["🎉", "😊", "🌟"];
-
-// Sticker button holder and custom sticker button
 const stickerButtonHolder = document.createElement("div");
 
-// Create sticker buttons from initial data
 initialStickers.forEach((emoji) => createStickerButton(emoji));
-
-// Button for custom sticker creation
 createButton("Custom Sticker", stickerButtonHolder, () => {
-  const customEmoji = prompt("Enter a custom sticker:", "🌈");
+  const customEmoji = prompt("Enter a custom sticker:", "🧽");
   if (customEmoji) {
     createStickerButton(customEmoji);
   }
 });
-
 app.append(stickerButtonHolder);
 
-// Function to create sticker buttons based on the emoji passed
 function createStickerButton(emoji: string) {
   createButton(emoji, stickerButtonHolder, () => {
     currentSticker = new StickerPreview(cursor.x, cursor.y, emoji);
@@ -97,7 +88,6 @@ let currentLine: Line | null = null;
 let toolPreview: ToolPreview | null = null;
 
 let lineThickness = 1;
-
 thinButton.classList.add("selectedTool");
 
 function dispatchDrawingChanged() {
@@ -120,7 +110,6 @@ function redraw() {
     line.display(ctx);
   }
 
-  // Draw stickers
   for (const sticker of stickers) {
     sticker.display(ctx);
   }
@@ -157,17 +146,18 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
+    // Update `toolPreview` every move
     toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness);
     dispatchToolMoved();
 
     if (cursor.active && currentLine) {
       currentLine.drag(e.offsetX, e.offsetY);
       dispatchDrawingChanged();
-    } else {
-      if (currentSticker) {
-        currentSticker.drag(cursor.x, cursor.y);
-      }
+    } else if (currentSticker) {
+      currentSticker.drag(cursor.x, cursor.y);
       dispatchDrawingChanged();
+    } else {
+      redraw(); // Redraw without dispatch if no cursor drag
     }
   });
 
