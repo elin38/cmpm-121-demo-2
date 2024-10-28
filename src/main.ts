@@ -58,20 +58,35 @@ const thickButton = createButton("Thick", thicknessButtonHolder, () => {
 thicknessButtonHolder.append(thinButton, thickButton);
 app.append(thicknessButtonHolder);
 
-// Create sticker buttons
-const stickerButtonHolder = document.createElement("div");
-const stickerEmojis = ["🎉", "😊", "🌟"];
-
-let currentSticker: StickerPreview | null = null;
 let stickers: Sticker[] = [];
+let currentSticker: StickerPreview | null = null;
 
-stickerEmojis.forEach((emoji) => {
+// Initial stickers data array
+const initialStickers = ["🎉", "😊", "🌟"];
+
+// Sticker button holder and custom sticker button
+const stickerButtonHolder = document.createElement("div");
+
+// Create sticker buttons from initial data
+initialStickers.forEach((emoji) => createStickerButton(emoji));
+
+// Button for custom sticker creation
+createButton("Custom Sticker", stickerButtonHolder, () => {
+  const customEmoji = prompt("Enter a custom sticker:", "🌈");
+  if (customEmoji) {
+    createStickerButton(customEmoji);
+  }
+});
+
+app.append(stickerButtonHolder);
+
+// Function to create sticker buttons based on the emoji passed
+function createStickerButton(emoji: string) {
   createButton(emoji, stickerButtonHolder, () => {
     currentSticker = new StickerPreview(cursor.x, cursor.y, emoji);
     dispatchToolMoved();
   });
-});
-app.append(stickerButtonHolder);
+}
 
 const ctx = canvas.getContext("2d");
 const cursor = { active: false, x: 0, y: 0 };
@@ -224,7 +239,7 @@ class StickerPreview {
   }
 
   drag(x: number, y: number) {
-    this.x = x; 
-    this.y = y; 
+    this.x = x;
+    this.y = y;
   }
 }
