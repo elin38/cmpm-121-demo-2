@@ -216,6 +216,7 @@ class Sticker {
 
   display(ctx: CanvasRenderingContext2D) {
     ctx.font = "32px Arial";
+    ctx.fillStyle = "black";
     ctx.fillText(this.emoji, this.x, this.y);
   }
 }
@@ -233,3 +234,35 @@ class StickerPreview {
     this.y = y;
   }
 }
+
+// Export button in a separate area
+const exportButtonHolder = document.createElement("div");
+exportButtonHolder.style.marginTop = "20px";
+app.append(exportButtonHolder);
+
+createButton("Export", exportButtonHolder, () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d");
+
+  if (!exportCtx) {
+    console.error("Unable to get 2D context for export canvas.");
+    return;
+  }
+
+  exportCtx.scale(4, 4);
+
+  for (const line of lines) {
+    line.display(exportCtx);
+  }
+
+  for (const sticker of stickers) {
+    sticker.display(exportCtx);
+  }
+
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
