@@ -44,25 +44,42 @@ createButton("Redo", buttonHolder, () => {
 app.append(buttonHolder);
 
 const thicknessButtonHolder = document.createElement("div");
+let lineThickness = 2;
+let currentColor = "#FF5733";
+
+const randomizeColor = () => `#${Math.floor(Math.random() * 16777215).toString(16)}`; // Random hex color
+
 const thinButton = createButton("Thin", thicknessButtonHolder, () => {
   lineThickness = 2;
-  thinButton.classList.add("selectedTool");
-  thickButton.classList.remove("selectedTool");
+  currentColor = randomizeColor();
+  updateToolPreview();
 });
 const thickButton = createButton("Thick", thicknessButtonHolder, () => {
   lineThickness = 6;
-  thickButton.classList.add("selectedTool");
-  thinButton.classList.remove("selectedTool");
+  currentColor = randomizeColor();
+  updateToolPreview();
 });
 thicknessButtonHolder.append(thinButton, thickButton);
 app.append(thicknessButtonHolder);
 
+function updateToolPreview() {
+  toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness, currentColor, randomizeRotation());
+  dispatchToolMoved();
+}
+
+const ctx = canvas.getContext("2d");
+const cursor = { active: false, x: 0, y: 0 };
+
+let lines: Line[] = [];
+let redoLines: Line[] = [];
+let currentLine: Line | null = null;
+let toolPreview: ToolPreview | null = null;
+
+const initialStickers = ["🎉", "😊", "🌟", "🌈", "💖", "🍀"];
 let stickers: Sticker[] = [];
 let currentSticker: StickerPreview | null = null;
 
-const initialStickers = ["🎉", "😊", "🌟", "🌈", "💖", "🍀"];
 const stickerButtonHolder = document.createElement("div");
-
 initialStickers.forEach((emoji) => createStickerButton(emoji));
 createButton("Custom Sticker", stickerButtonHolder, () => {
   const customEmoji = prompt("Enter a custom sticker:", "🧽");
@@ -74,21 +91,15 @@ app.append(stickerButtonHolder);
 
 function createStickerButton(emoji: string) {
   createButton(emoji, stickerButtonHolder, () => {
-    currentSticker = new StickerPreview(cursor.x, cursor.y, emoji);
+    const rotation = randomizeRotation();
+    currentSticker = new StickerPreview(cursor.x, cursor.y, emoji, randomizeColor(), rotation);
     dispatchToolMoved();
   });
 }
 
-const ctx = canvas.getContext("2d");
-const cursor = { active: false, x: 0, y: 0 };
-
-let lines: Line[] = [];
-let redoLines: Line[] = [];
-let currentLine: Line | null = null;
-let toolPreview: ToolPreview | null = null;
-
-let lineThickness = 1;
-thinButton.classList.add("selectedTool");
+function randomizeRotation() {
+  return Math.floor(Math.random() * 360);
+}
 
 function dispatchDrawingChanged() {
   const event = new CustomEvent("drawing-changed");
@@ -132,10 +143,10 @@ if (ctx) {
     cursor.y = e.offsetY;
 
     if (currentSticker) {
-      stickers.push(new Sticker(cursor.x, cursor.y, currentSticker.emoji));
+      stickers.push(new Sticker(cursor.x, cursor.y, currentSticker.emoji, currentSticker.rotation));
       currentSticker = null;
     } else {
-      currentLine = new Line(cursor.x, cursor.y, lineThickness);
+      currentLine = new Line(cursor.x, cursor.y, lineThickness, currentColor);
       lines.push(currentLine);
       redoLines.splice(0, redoLines.length);
     }
@@ -146,7 +157,7 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
-    toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness);
+    toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness, currentColor, randomizeRotation());
     dispatchToolMoved();
 
     if (cursor.active && currentLine) {
@@ -177,14 +188,17 @@ if (ctx) {
 class Line {
   private points: { x: number; y: number }[];
   private thickness: number;
+  private color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.points = [{ x, y }];
     this.thickness = thickness;
+    this.color = color;
   }
 
   display(ctx: CanvasRenderingContext2D) {
     ctx.lineWidth = this.thickness;
+    ctx.strokeStyle = this.color;
     ctx.beginPath();
     const { x, y } = this.points[0];
     ctx.moveTo(x, y);
@@ -200,32 +214,45 @@ class Line {
 }
 
 class ToolPreview {
-  constructor(private x: number, private y: number, private thickness: number) {}
+  constructor(private x: number, private y: number, private thickness: number, private color: string, private rotation: number) {}
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.translate(this.x, this.y);
+    ctx.rotate((Math.PI / 180) * this.rotation);
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.thickness, 0, Math.PI * 2);
+    ctx.arc(0, 0, this.thickness, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 }
 
 class Sticker {
-  constructor(private x: number, private y: number, public emoji: string) {}
+  constructor(private x: number, private y: number, public emoji: string, private rotation: number) {}
 
   display(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate((Math.PI / 180) * this.rotation);
     ctx.font = "32px Arial";
     ctx.fillStyle = "black";
-    ctx.fillText(this.emoji, this.x, this.y);
+    ctx.fillText(this.emoji, 0, 0);
+    ctx.restore();
   }
 }
 
 class StickerPreview {
-  constructor(private x: number, private y: number, public emoji: string) {}
+  constructor(private x: number, private y: number, public emoji: string, private color: string, public rotation: number) {}
 
   draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.translate(this.x, this.y);
+    ctx.rotate((Math.PI / 180) * this.rotation);
     ctx.font = "32px Arial";
-    ctx.fillText(this.emoji, this.x, this.y);
+    ctx.fillText(this.emoji, 0, 0);
+    ctx.restore();
   }
 
   drag(x: number, y: number) {
@@ -234,7 +261,6 @@ class StickerPreview {
   }
 }
 
-// Export button in a separate area
 const exportButtonHolder = document.createElement("div");
 exportButtonHolder.style.marginTop = "20px";
 app.append(exportButtonHolder);
@@ -261,7 +287,7 @@ createButton("Export", exportButtonHolder, () => {
   }
 
   const anchor = document.createElement("a");
-  anchor.href = exportCanvas.toDataURL("image/png");
-  anchor.download = "sketchpad.png";
+  anchor.href = exportCanvas.toDataURL();
+  anchor.download = "drawing.png";
   anchor.click();
 });
