@@ -45,12 +45,12 @@ app.append(buttonHolder);
 
 const thicknessButtonHolder = document.createElement("div");
 const thinButton = createButton("Thin", thicknessButtonHolder, () => {
-  lineThickness = 1;
+  lineThickness = 2;
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
 });
 const thickButton = createButton("Thick", thicknessButtonHolder, () => {
-  lineThickness = 4;
+  lineThickness = 6;
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
@@ -60,7 +60,7 @@ app.append(thicknessButtonHolder);
 let stickers: Sticker[] = [];
 let currentSticker: StickerPreview | null = null;
 
-const initialStickers = ["🎉", "😊", "🌟"];
+const initialStickers = ["🎉", "😊", "🌟", "🌈", "💖", "🍀"];
 const stickerButtonHolder = document.createElement("div");
 
 initialStickers.forEach((emoji) => createStickerButton(emoji));
@@ -146,7 +146,6 @@ if (ctx) {
     cursor.x = e.offsetX;
     cursor.y = e.offsetY;
 
-    // Update `toolPreview` every move
     toolPreview = new ToolPreview(cursor.x, cursor.y, lineThickness);
     dispatchToolMoved();
 
@@ -157,7 +156,7 @@ if (ctx) {
       currentSticker.drag(cursor.x, cursor.y);
       dispatchDrawingChanged();
     } else {
-      redraw(); // Redraw without dispatch if no cursor drag
+      redraw();
     }
   });
 
