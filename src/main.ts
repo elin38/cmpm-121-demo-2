@@ -49,13 +49,20 @@ const initialStickers = ["🎉", "😊", "🌟", "🌈", "💖", "🍀"];
 initialStickers.forEach(createStickerButton);
 
 // Set up buttons
-createButton("Clear", buttonHolder, clearCanvas);
-createButton("Undo", buttonHolder, undo);
-createButton("Redo", buttonHolder, redo);
-createButton("Thin", thicknessButtonHolder, () => setLineProperties(2));
-createButton("Thick", thicknessButtonHolder, () => setLineProperties(6));
-createButton("Custom Sticker", stickerButtonHolder, addCustomSticker);
-createButton("Export", exportButtonHolder, exportDrawing);
+// Button configurations -> refactored by using an array to help improve scalability and maintenence 
+const buttonConfigs = [
+  { label: "Clear", parent: buttonHolder, action: clearCanvas },
+  { label: "Undo", parent: buttonHolder, action: undo },
+  { label: "Redo", parent: buttonHolder, action: redo },
+  { label: "Thin", parent: thicknessButtonHolder, action: () => setLineProperties(2) },
+  { label: "Thick", parent: thicknessButtonHolder, action: () => setLineProperties(6) },
+  { label: "Custom Sticker", parent: stickerButtonHolder, action: addCustomSticker },
+  { label: "Export", parent: exportButtonHolder, action: exportDrawing },
+];
+
+// Dynamically create buttons
+buttonConfigs.forEach(({ label, parent, action }) => createButton(label, parent, action));
+
 
 // Canvas context and redraw function
 const ctx = canvas.getContext("2d");
