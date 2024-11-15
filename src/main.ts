@@ -104,7 +104,7 @@ function redo() {
 function setLineProperties(thickness: number) {
   lineThickness = thickness;
   currentColor = randomizeColor();
-  updateToolPreview();
+
 }
 
 // Add custom sticker input
